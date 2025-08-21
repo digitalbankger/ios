@@ -1,0 +1,79 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="ru.daigo.appmobile"
+        version="1.0.0"
+        ios-CFBundleVersion="1"
+        android-versionCode="100"
+        xmlns="http://www.w3.org/ns/widgets"
+        xmlns:cdv="http://cordova.apache.org/ns/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <name>Daigo</name>
+  <description>Daigo mobile app</description>
+
+  <!-- Главная страница (собранная Vite в папку www/) -->
+  <content src="index.html" />
+
+  <!-- Разрешения на навигацию и сетевые запросы -->
+  <!-- Лучше сузить домены до своих API/доменов -->
+  <access origin="*" />
+  <allow-navigation href="*" />
+  <allow-intent href="http://*/*" />
+  <allow-intent href="https://*/*" />
+
+  <!-- Общее: WebView только WK, чтобы избежать UIWebView -->
+  <preference name="WKWebViewOnly" value="true" />
+  <preference name="ScrollEnabled" value="false" />
+  <preference name="BackupWebStorage" value="none" />
+  <preference name="AutoHideSplashScreen" value="true" />
+
+  <!-- Плагины -->
+  <plugin name="cordova-plugin-whitelist" />
+  <plugin name="cordova-plugin-inappbrowser" />
+  <plugin name="cordova-plugin-geolocation" />
+  <plugin name="cordova-plugin-customurlscheme" spec="~5.0.0">
+    <variable name="URL_SCHEME" value="daigoapp" />
+  </plugin>
+
+  <!-- ANDROID -->
+  <platform name="android">
+    <icon src="res/icon.png" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  </platform>
+
+  <!-- iOS: обязательные описания прав -->
+  <platform name="ios">
+    <preference name="deployment-target" value="13.0" />
+
+    <!-- Локация: минимум WhenInUse. Текст показывается в системном алерте. -->
+    <edit-config file="*-Info.plist" mode="merge" target="NSLocationWhenInUseUsageDescription">
+      <string>Нужно для определения вашего города и расчёта доставки.</string>
+    </edit-config>
+    <!-- Если планируете фоновые гео-сценарии — добавьте: -->
+    <!--
+    <edit-config file="*-Info.plist" mode="merge" target="NSLocationAlwaysAndWhenInUseUsageDescription">
+      <string>Нужно для корректной работы геолокации в фоне.</string>
+    </edit-config>
+    -->
+
+    <!-- Если у вас ВЕЗДЕ HTTPS — этот блок НЕ нужен.
+         Если где-то остался HTTP, точечно разрешите домены (пример ниже) -->
+    <!--
+    <edit-config file="*-Info.plist" mode="merge" target="NSAppTransportSecurity">
+      <dict>
+        <key>NSExceptionDomains</key>
+        <dict>
+          <key>api.daigo.ru</key>
+          <dict>
+            <key>NSIncludesSubdomains</key><true/>
+            <key>NSTemporaryExceptionAllowsInsecureHTTPLoads</key><true/>
+            <key>NSTemporaryExceptionRequiresForwardSecrecy</key><false/>
+          </dict>
+        </dict>
+      </dict>
+    </edit-config>
+    -->
+  </platform>
+
+</widget>
