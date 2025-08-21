@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply font-sans;
+  background-color: #fff;
+}
+
+html {
+  max-width: 425px;
+  margin-inline: auto;
+}
+
+#app {
+  background-color: #fff;
+}
+
+::placeholder {
+  font-weight: 300;
+  letter-spacing:0.5px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  font-weight: 300;
+  letter-spacing:0.5px;
+}
+
+input {
+  border: 1px solid #11111134;
+
+}
+input:focus {
+  border-color: #659CFF;
+}
+input:focus-visible {
+  outline: none;
+}
+
+* {
+  user-select: none;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 325px) {
+  ::placeholder {
+    font-size: 14px;
+  }
+  
+  input::placeholder,
+  textarea::placeholder {
+    font-size: 14px;
+  }
+}

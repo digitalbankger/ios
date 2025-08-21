@@ -1,0 +1,43 @@
+[
+    {
+        "id": 123-323-2323,
+        "type": "promo_code",
+        "image": "images/uploads/promo_photo/promo-1.png",
+        "name": "Приветственный бонус",
+        "description": "Скидка 10% на первый заказ по промокоду WELCOME 10",
+        "coupon_id": "WELCOME10",
+        "discount": "10%",
+        "label": "Товар дня"  
+    },
+    {
+        "id": 322-2323-2323,
+        "type": "label",
+        "image": "",
+        "name": "Товар дня",
+        "description": "",
+        "coupon_id": "",
+        "discount": "",
+        "label": "Товар дня"  
+    },
+    {
+        "id": 332-3232-2323,
+        "type": "2+1",
+        "image": "images/uploads/promo_photo/promo-2.png",
+        "name": "2+1 на товар Daigo 5ml",
+        "description": "Добавьте в корзину 2 Даиго 5мл и получите 1 в подарок",
+        "coupon_id": "",
+        "discount": "",
+        "label": "2+1"
+    },
+    {
+        "id": 432323-32323-3232,
+        "type": "discount",
+        "image": "/uploads/promo_photo/promo-3.png",
+        "name": "Скидка на все товары к 8 марта",
+        "description": "20% скидка на любой товар к 8 марта",
+        "coupon_id": "",
+        "discount": "20%",
+        "label": "8 марта"
+    }
+]
+  

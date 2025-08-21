@@ -1,0 +1,1 @@
+import{z as t}from"./index-B_iXXpEJ.js";const r=t("filtersStore",{state:()=>({isFilterOpen:!1,filters:{newest:!1,popular:!1,priceDesc:!1,priceAsc:!1}}),actions:{toggleFilter(){this.isFilterOpen=!this.isFilterOpen},setFilter(s){Object.keys(this.filters).forEach(e=>{this.filters[e]=e===s?!this.filters[e]:!1})}}});export{r as u};

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src * data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * data: blob:; img-src * data: blob:; style-src * 'unsafe-inline';">
+    <link rel="icon" type="image/svg+xml" href="./vite.svg" />
+    <script type="text/javascript">
+      (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){ (m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {
+          if (document.scripts[j].src === r) return;
+        }
+        k=e.createElement(t);
+        k.async = 1;
+        k.src = r;
+        k.onload = () => console.log('[YandexMetrika] tag.js загружен');
+        a=e.getElementsByTagName(t)[0];
+        a.parentNode.insertBefore(k,a);
+      })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+    
+      ym(101458573, "init", {
+        clickmap:true,
+        trackLinks:true,
+        accurateTrackBounce:true,
+        ecommerce:"dataLayer"
+      });
+    </script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <title>Daigo</title>
+    <script type="module" crossorigin src="./assets/index-B_iXXpEJ.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-B8tWuyml.css">
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="cordova.js"></script> 
+    <noscript><div><img src="https://mc.yandex.ru/watch/101458573" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+  </body>
+</html>

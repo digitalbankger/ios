@@ -1,0 +1,27 @@
+[
+    {
+        "id": 1,
+        "name": "Товар дня",
+        "description": "Добавляет лэйбл товар дня",
+        "action": "boost",
+        "discount": "",
+        "label": "Товар дня"
+    },
+    {
+        "id": 2,
+        "name": "Новинка",
+        "description": "Добавляет лэйбл Новинка",
+        "action": "boost",
+        "discount": "",
+        "label": "Новинка"
+    },
+    {
+        "id": 3,
+        "name": "Скидка",
+        "description": "Добавляет лэйбл товар дня",
+        "action": "discount",
+        "discount": "10",
+        "label": "Скидка 10%"
+    }
+  ]
+  
