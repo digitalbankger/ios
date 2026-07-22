@@ -10,7 +10,7 @@
     "verify:api": "node scripts/verify-api-contract.mjs",
     "build:checked": "npm run verify:api && vite build",
     "appflow:build": "npm run build:checked",
-    "cordova:prepare:ios": "cordova platform add ios@8.1.1 && cordova prepare ios",
+    "cordova:prepare:ios": "cordova platform add ios@7.1.1 && cordova prepare ios",
     "cordova:prepare:android": "cordova platform add android@14.0.1 && cordova prepare android"
   },
   "dependencies": {
@@ -28,7 +28,7 @@
     "autoprefixer": "^10.4.20",
     "cordova": "13.0.0",
     "cordova-android": "14.0.1",
-    "cordova-ios": "8.1.1",
+    "cordova-ios": "7.1.1",
     "cordova-plugin-customurlscheme": "5.0.2",
     "cordova-plugin-geolocation": "5.0.0",
     "cordova-plugin-inappbrowser": "7.0.0",

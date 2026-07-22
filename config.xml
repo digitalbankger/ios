@@ -35,7 +35,7 @@
     <preference name="SplashScreenBackgroundColor" value="#FFFFFF" />
 
     <engine name="android" spec="14.0.1" />
-    <engine name="ios" spec="8.1.1" />
+    <engine name="ios" spec="7.1.1" />
 
     <plugin name="cordova-plugin-inappbrowser" spec="7.0.0" />
     <plugin name="cordova-plugin-geolocation" spec="5.0.0">
