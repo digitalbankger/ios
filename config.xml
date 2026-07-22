@@ -46,6 +46,11 @@
     </plugin>
     <plugin name="cordova-plugin-statusbar" spec="4.0.0" />
 
+    <hook
+        type="after_platform_add"
+        src="scripts/force-ios-only.cjs"
+    />
+    
     <platform name="android">
         <icon src="res/icon.png" />
         <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
