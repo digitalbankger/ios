@@ -1,81 +1,75 @@
 import api from "@/services/api";
-import { useUserStore } from "@/store/userStore";
+import { useAuthStore } from "@/store/authStore";
 
+let initialized = false;
 let cachedToken = null;
-let tokenSent = false;
+let tokenSentForUser = null;
 
-export function initPushNotifications() {
-  document.addEventListener("deviceready", async () => {
-    console.log("[Cordova] deviceready — пуш-инициализация");
+function currentFirebasePlugin() {
+  return window.FirebasePlugin || null;
+}
 
-    window.FirebasePlugin.getToken(async token => {
-      console.log("📲 FCM Token получен:", token);
-      cachedToken = token;
+async function sendToken(force = false) {
+  const auth = useAuthStore();
+  const daigoId = auth.userId || localStorage.getItem("daigo_id");
+  if (!cachedToken || !daigoId) return;
+  if (!force && tokenSentForUser === String(daigoId)) return;
 
-      trySendToken();
-    }, err => {
-      console.error("❌ Ошибка при получении токена:", err);
+  try {
+    await api.post("/v1/auth/notifications/register-token", {
+      daigo_id: daigoId,
+      token: cachedToken,
+      platform: window.cordova?.platformId === "ios" ? "iOS" : "Android",
     });
+    tokenSentForUser = String(daigoId);
+    console.log("[push] Токен зарегистрирован");
+  } catch (error) {
+    console.error("[push] Ошибка регистрации токена:", error);
+  }
+}
 
-    window.FirebasePlugin.onTokenRefresh(async token => {
-      console.log("Обновлён FCM Token:", token);
+function initializePlugin() {
+  const plugin = currentFirebasePlugin();
+  if (!plugin || initialized) return;
+  initialized = true;
+
+  plugin.getToken(
+    (token) => {
       cachedToken = token;
-      trySendToken(true);
-    });
+      sendToken();
+    },
+    (error) => console.error("[push] Не удалось получить FCM token:", error)
+  );
 
-    window.FirebasePlugin.onMessageReceived(data => {
-      console.log("📥 Push-сообщение:", data);
+  plugin.onTokenRefresh(
+    (token) => {
+      cachedToken = token;
+      sendToken(true);
+    },
+    (error) => console.error("[push] Ошибка обновления FCM token:", error)
+  );
 
-      const existing = JSON.parse(localStorage.getItem("notifications") || "[]");
-      existing.unshift({
+  plugin.onMessageReceived(
+    (data) => {
+      const notifications = JSON.parse(localStorage.getItem("notifications") || "[]");
+      notifications.unshift({
         id: Date.now(),
         title: data.title || "Без заголовка",
         body: data.body || "",
         raw: data,
-        read: false
+        read: false,
       });
-      localStorage.setItem("notifications", JSON.stringify(existing));
-    }, err => {
-      console.error("❌ Ошибка при получении push-сообщения:", err);
-    });
-
-    const userStore = useUserStore();
-    watchDaigoId(userStore);
-  });
+      localStorage.setItem("notifications", JSON.stringify(notifications));
+    },
+    (error) => console.error("[push] Ошибка получения сообщения:", error)
+  );
 }
 
-function trySendToken(force = false) {
-  const userStore = useUserStore();
-  const daigoId = userStore.profile?.id;
+export function initPushNotifications() {
+  // После входа deviceready обычно уже произошёл, поэтому сначала пробуем сразу.
+  if (currentFirebasePlugin()) initializePlugin();
+  else document.addEventListener("deviceready", initializePlugin, { once: true });
 
-  if (!cachedToken || !daigoId) {
-    console.warn("Ожидаем токен или daigo_id...");
-    return;
-  }
-
-  if (tokenSent && !force) return;
-
-  const payload = {
-    daigo_id: daigoId,
-    token: cachedToken,
-    platform: "Android",
-  };
-
-  api.post("/v1/auth/notifications/register-token", payload)
-    .then(() => {
-      console.log("Токен успешно отправлен на сервер");
-      tokenSent = true;
-    })
-    .catch(err => {
-      console.error("Ошибка при отправке токена:", err);
-    });
-}
-
-function watchDaigoId(userStore) {
-  const check = setInterval(() => {
-    if (userStore.profile?.id) {
-      trySendToken();
-      clearInterval(check);
-    }
-  }, 10000);
+  // Если плагин уже инициализирован, но пользователь только что вошёл.
+  sendToken();
 }

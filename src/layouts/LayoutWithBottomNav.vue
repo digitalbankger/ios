@@ -16,13 +16,18 @@ import AppNavigation from "@/components/AppNavigation.vue";
 import { onMounted } from "vue";
 import { useUserStore } from "@/store/userStore";
 import { useProductStore } from "@/store/productStore";
+import { useCartStore } from "@/store/cartStore";
 
 const userStore = useUserStore();
 const productStore = useProductStore();
+const cartStore = useCartStore();
 
-onMounted(() => {
-  userStore.loadProfile();
-  productStore.fetchProducts();
+onMounted(async () => {
+  await Promise.allSettled([
+    userStore.loadProfile(),
+    productStore.fetchProducts(),
+    cartStore.loadCart(),
+  ]);
 });
 
 </script>

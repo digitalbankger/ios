@@ -1,0 +1,7 @@
+{
+  "name": "Daigo",
+  "type": "custom",
+  "integrations": {
+    "cordova": {}
+  }
+}

@@ -47,10 +47,9 @@ const props = defineProps({
 const emit = defineEmits(['edit', 'save', 'update:paymentMethod']);
 
 const paymentMethods = ref([
-  { id: "sbp", description: "Оплата по СБП", image: new URL("@/assets/img/payment/sbp.png", import.meta.url).href },
-  { id: "tbank", description: "Т-банк рассрочка", image: new URL("@/assets/img/payment/tbank.png", import.meta.url).href },
+  { id: "tpay_qr", description: "QR СБП от Т-Банка — самый удобный", image: new URL("@/assets/img/payment/sbp.png", import.meta.url).href },
+  { id: "tpay_card", description: "Банковской картой через Т-Банк", image: new URL("@/assets/img/payment/card.png", import.meta.url).href },
   { id: "dolyame", description: "Оплата Долями", image: new URL("@/assets/img/payment/dolyami.png", import.meta.url).href },
-  { id: "bank_card", description: "Оплата картой онлайн", image: new URL("@/assets/img/payment/card.png", import.meta.url).href },
   { id: "cash", description: "Оплата наличными курьеру", image: new URL("@/assets/img/payment/cash.png", import.meta.url).href },
   { id: "courier_card", description: "Оплата картой курьеру", image: new URL("@/assets/img/payment/card-courier.png", import.meta.url).href }
 ]);

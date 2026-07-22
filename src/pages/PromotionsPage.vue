@@ -22,7 +22,6 @@
         :key="promotion.id"
         :promotion="promotion"
         :applied="promoStore.appliedPromotion?.id === promotion.id"
-        @apply-promotion="handleApplyPromotion"
       />
     </div>
   </div>
@@ -32,15 +31,11 @@
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { usePromoStore } from "@/store/promotionStore";
-import { useCartStore } from "@/store/cartStore";
 import PromotionItem from "@/components/PromotionItem.vue";
 import Button from "@/components/ui/Button.vue";
-import { computed } from "vue";
 
 const router = useRouter();
 const promoStore = usePromoStore();
-const cartStore = useCartStore();
-
 const loading = ref(true);
 
 onMounted(async () => {
@@ -52,20 +47,6 @@ async function reloadPromotions() {
   loading.value = true;
   await promoStore.loadPromotions();
   loading.value = false;
-}
-
-async function handleApplyPromotion(promoId) {
-  const result = await promoStore.applyPromotion(
-    promoId,
-    cartStore.items,
-    cartStore.totalPrice
-  );
-
-  if (result?.activate) {
-    console.log(`Акция успешно применена! Новая сумма: ${result.new_amount} ₽`);
-  } else {
-    console.log("Акция не была применена. Попробуйте другую.");
-  }
 }
 </script>
 

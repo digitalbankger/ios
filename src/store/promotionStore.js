@@ -1,110 +1,148 @@
+import { openExternalUrl } from "@/utils/openExternalUrl";
 import { defineStore } from "pinia";
-import { fetchPromotions, checkCouponUsage } from "@/services/promoService";
+import api from "@/services/api";
+import { fetchPromotions, getIdentityParams } from "@/services/promoService";
 import { useCartStore } from "@/store/cartStore";
+import { useAuthStore } from "@/store/authStore";
 
 export const usePromoStore = defineStore("promoStore", {
   state: () => ({
     promotions: [],
-    appliedPromotion: JSON.parse(localStorage.getItem("appliedPromotion")) || null,
+    appliedPromotion: null,
+    isLoading: false,
+    isApplying: false,
+    pendingId: null,
+    error: "",
   }),
 
   actions: {
     async loadPromotions() {
+      if (this.isLoading) return this.promotions;
+      this.isLoading = true;
+      this.error = "";
       try {
-        this.promotions = await fetchPromotions();
+        const promotions = await fetchPromotions();
+        this.promotions = Array.isArray(promotions) ? promotions : [];
+        this.appliedPromotion = this.promotions.find((promo) => promo.is_applied) || null;
+        return this.promotions;
       } catch (error) {
-        console.error("Ошибка загрузки акций:", error);
+        this.promotions = [];
+        this.appliedPromotion = null;
+        this.error = error?.response?.data?.message || error?.message || "Не удалось загрузить акции";
+        console.error("[promotion] Ошибка загрузки акций:", error);
+        return [];
+      } finally {
+        this.isLoading = false;
       }
     },
 
     findPromotionByCoupon(coupon) {
-      const normalizedCoupon = coupon.trim().toUpperCase();
-      return this.promotions.find(promo => promo.coupon.trim().toUpperCase() === normalizedCoupon);
+      const normalized = String(coupon || "").trim().toUpperCase();
+      return this.promotions.find((promo) =>
+        String(promo.coupon || "").trim().toUpperCase() === normalized
+      );
     },
 
     isGiftPromotionActive() {
-      return this.appliedPromotion?.promo_type === "gift" && this.appliedPromotion.id === 9;
+      return ["gift", "2plus1"].includes(
+        this.appliedPromotion?.promo_type || this.appliedPromotion?.type
+      );
     },
 
-    applyGift21Logic() {
-      const cartStore = useCartStore();
-      const mainProductId = "71700acb-3584-490b-a5f7-62e8cb57b3c9";
-      const giftProduct = {
-        product_id: "ca16b1e3-f6bd-4845-9079-7c66ba9d1a26",
-        title: "🎁 Подарок",
-        price: 0,
-        isGift: true,
-        images: [
-          { image_url: "/uploads/products_photo/ce7c342e-1626-411d-bdf2-2a65f971afcb.png" }
-        ]
-      };
-    
-      cartStore.applyGift21(mainProductId, giftProduct);
-    },
+    // Подарок больше не добавляется локально: правило 2+1 рассчитывает backend корзины.
+    applyGift21Logic() {},
 
     async applyPromotion(promotion) {
+      if (!promotion || this.isApplying) return { success: false };
       const cartStore = useCartStore();
+      const authStore = useAuthStore();
+      const promoType = promotion.promo_type || promotion.type || "notice";
 
-      if (this.appliedPromotion && this.appliedPromotion.promo_type !== promotion.promo_type) {
-        alert("Уже применена другая акция. Сначала сбросьте текущую!");
-        return { success: false };
-      }
-
-      if (promotion.promo_type === "code") {
-        const response = await checkCouponUsage(cartStore.userId, promotion.coupon);
-        if (!response || response.usage) {
-          alert("Купон уже использован или недоступен!");
-          return { success: false };
-        }
-        cartStore.applyPromoDiscount(promotion);
-        this.appliedPromotion = promotion;
-        localStorage.setItem("appliedPromotion", JSON.stringify(promotion));
-        if (typeof ym !== 'undefined') {
-          ym(101458573, 'reachGoal', 'apply_promo_code');
-        }   
-        return { success: true };
-      }
-
-      if (promotion.promo_type === "discount") {
-        if (promotion.id === 12) {
-          const targetProductId = "f7b3cd6e-577f-4de6-98e7-cbcb37bc41b2";
-          const targetProduct = cartStore.items.find((item) => item.product_id === targetProductId);
-          if (!targetProduct) {
-            alert("❌ Данная скидка применима только к определенному товару!");
-            return { success: false };
+      this.isApplying = true;
+      this.pendingId = promotion.id;
+      try {
+        if (promotion.link) {
+          const url = String(promotion.link);
+          if (/^https?:\/\//i.test(url)) {
+            openExternalUrl(url);
+          } else {
+            window.location.hash = url.startsWith("#") ? url : `#${url}`;
           }
-          promotion.target_product_id = targetProductId;
+          return { success: true };
         }
-        cartStore.applyPromoDiscount(promotion);
-        this.appliedPromotion = promotion;
-        localStorage.setItem("appliedPromotion", JSON.stringify(promotion));
-        if (typeof ym !== 'undefined') {
-          console.log('[YandexMetrika] Цель: Применение промокода (apply_promo_code)');
-          ym(101458573, 'reachGoal', 'apply_promo_code');
-        }        
-        return { success: true };
-      }
 
-      if (promotion.promo_type === "gift" && promotion.id === 9) {
-        this.appliedPromotion = promotion;
-        localStorage.setItem("appliedPromotion", JSON.stringify(promotion));
-        this.applyGift21Logic();
-        if (typeof ym !== 'undefined') {
-          console.log('[YandexMetrika] Цель: Применение промокода (apply_promo_code)');
-          ym(101458573, 'reachGoal', 'apply_promo_code');
-        }        
-        return { success: true };
-      }
+        if (["code", "2plus1"].includes(promoType) && !authStore.isAuthenticated) {
+          return {
+            success: false,
+            authRequired: true,
+            message: "Для применения акции необходимо авторизоваться",
+          };
+        }
 
-      return { success: false };
+        if (promoType === "code") {
+          const code = String(promotion.coupon || "").trim();
+          if (!code) return { success: false, message: "Для акции не задан промокод" };
+          await cartStore.ensureLoaded();
+          if (!cartStore.items.some((item) => !item.isGift)) {
+            return { success: false, message: "Сначала добавьте товар в корзину" };
+          }
+          const data = await cartStore.applyCoupon(code);
+          await this.loadPromotions();
+          return { success: true, data };
+        }
+
+        if (promoType === "2plus1") {
+          if (!promotion.product_id) {
+            return { success: false, message: "Для акции не указан товар" };
+          }
+          const data = await cartStore.apply2plus1(promotion.product_id);
+          await this.loadPromotions();
+          return { success: true, data };
+        }
+
+        if (promoType === "discount" && promotion.product_slug) {
+          window.location.hash = `#/product/${encodeURIComponent(promotion.product_slug)}`;
+          return { success: true };
+        }
+
+        if (promoType === "notice") return { success: true };
+
+        window.location.hash = "#/catalog";
+        return { success: true };
+      } catch (error) {
+        const message =
+          error?.response?.data?.coupon?.validation_error ||
+          error?.response?.data?.validation_error ||
+          error?.response?.data?.message ||
+          error?.message ||
+          "Акция не применена";
+        return { success: false, message, error };
+      } finally {
+        this.isApplying = false;
+        this.pendingId = null;
+      }
+    },
+
+    async cancelActive(promotion = this.appliedPromotion) {
+      if (!promotion?.id) return;
+      const identity = getIdentityParams();
+      this.isApplying = true;
+      this.pendingId = promotion.id;
+      try {
+        await api.delete("/v1/shop/promotion/cancel", {
+          params: identity,
+          data: { promo_id: promotion.id },
+        });
+        await useCartStore().loadCart({ force: true });
+        await this.loadPromotions();
+      } finally {
+        this.isApplying = false;
+        this.pendingId = null;
+      }
     },
 
     clearPromotion() {
       this.appliedPromotion = null;
-      localStorage.removeItem("appliedPromotion");
-      const cartStore = useCartStore();
-      cartStore.clearDiscounts();
-      console.log("🚫 [clearPromotion] Все акции сброшены.");
     },
   },
 });

@@ -24,7 +24,11 @@
       <CartControls :product="product" />
     </div>
 
-    <div v-else class="text-gray-500 text-lg">Загрузка товара...</div>
+    <div v-else-if="loading" class="text-gray-500 text-lg">Загрузка товара...</div>
+    <div v-else class="flex flex-col items-center gap-3 py-10">
+      <p class="text-red-500 text-sm text-center">{{ errorMessage || "Товар не найден" }}</p>
+      <button class="text-primary underline" @click="loadProduct">Повторить</button>
+    </div>
     <Transition name="slide-up">
       <DolyamiModal v-if="showDolyamiModal" :price="product?.price || 0" @close="showDolyamiModal = false" />
     </Transition>
@@ -57,6 +61,34 @@ const showCityModal = ref(false);
 
 const city = ref(localStorage.getItem("user_city") || "Москва");
 const deliveryInfo = ref(JSON.parse(localStorage.getItem("user_delivery_info") || "{}"));
+
+function getUserCoordinates() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error("Геолокация не поддерживается"));
+    navigator.geolocation.getCurrentPosition(
+      (position) => resolve({ lat: position.coords.latitude, lon: position.coords.longitude }),
+      reject,
+      { timeout: 10000, enableHighAccuracy: false }
+    );
+  });
+}
+
+async function getCityByCoords({ lat, lon }) {
+  // Для reverse-geocode используем DaData, как и в актуальном checkout сайта.
+  // Если сервис недоступен, пользователь выберет город вручную.
+  const response = await fetch("https://suggestions.dadata.ru/suggestions/api/4_1/rs/geolocate/address", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Token ac0fc720467713631eff0602ba19a2648c34f21d",
+    },
+    body: JSON.stringify({ lat, lon, count: 1 }),
+  });
+  if (!response.ok) throw new Error("Не удалось определить город");
+  const data = await response.json();
+  const item = data?.suggestions?.[0];
+  return item?.data?.city || item?.data?.settlement || "Москва";
+}
 
 const initCityDetection = async () => {
   const savedCity = localStorage.getItem("user_city");
@@ -105,19 +137,37 @@ const route = useRoute();
 const router = useRouter();
 const productStore = useProductStore();
 const showDolyamiModal = ref(false);
+const loading = ref(true);
+const errorMessage = ref("");
 
-const product = computed(() => productStore.products.find(p => p.url_cpu === route.params.url_cpu));
+const product = computed(() => {
+  const slug = String(route.params.url_cpu || "");
+  const list = Array.isArray(productStore.products) ? productStore.products : [];
+  return list.find((item) => String(item.url_cpu || item.slug) === slug) ||
+    (String(productStore.selectedProduct?.url_cpu || productStore.selectedProduct?.slug) === slug
+      ? productStore.selectedProduct
+      : null);
+});
+
+async function loadProduct() {
+  loading.value = true;
+  errorMessage.value = "";
+  try {
+    await productStore.fetchProducts();
+    await productStore.fetchProductById(String(route.params.url_cpu || ""));
+  } catch (error) {
+    errorMessage.value = error?.response?.data?.message || error?.message || "Не удалось загрузить товар";
+  } finally {
+    loading.value = false;
+  }
+}
 
 onMounted(async () => {
-  await initCityDetection();
-
-  if (!productStore.products.length) {
-    productStore.fetchProducts();
-  }
-
-  if (!promoStore.promotions.length) {
-    await promoStore.loadPromotions();
-  }
+  await Promise.allSettled([
+    initCityDetection(),
+    promoStore.promotions.length ? Promise.resolve() : promoStore.loadPromotions(),
+  ]);
+  await loadProduct();
 });
 
 const isOutletProduct = computed(() => {

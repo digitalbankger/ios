@@ -75,7 +75,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useProductStore } from "@/store/productStore";
 import { usePromoStore } from "@/store/promotionStore";
-import { defineEmits } from "vue";
+import { normalizeMediaUrl } from "@/utils/mediaUrl";
 
 const emit = defineEmits(["update:modelValue", "search"]);
 
@@ -92,14 +92,30 @@ const router = useRouter();
 const productStore = useProductStore();
 const promoStore = usePromoStore();
 
-onMounted(() => {
-  productStore.fetchProducts();
+watch(
+  () => props.modelValue,
+  (value) => {
+    if (value !== searchQuery.value) searchQuery.value = value || "";
+  }
+);
+
+function onInput() {
+  emit("update:modelValue", searchQuery.value);
+  emit("search", searchQuery.value);
+}
+
+onMounted(async () => {
+  try {
+    await Promise.all([
+      productStore.fetchProducts(),
+      promoStore.promotions.length ? Promise.resolve() : promoStore.loadPromotions(),
+    ]);
+  } catch (error) {
+    console.error("[search] Не удалось загрузить данные поиска:", error);
+  }
 });
 
-const getFullImageUrl = (imgPath) => {
-  if (!imgPath) return "";
-  return imgPath.startsWith("http") ? imgPath : `https://api.daigo.ru${imgPath}`;
-};
+const getFullImageUrl = (imgPath) => normalizeMediaUrl(imgPath);
 
 const formatPrice = (price) => {
   return new Intl.NumberFormat("ru-RU").format(price)
@@ -122,7 +138,8 @@ const productsFiltered = computed(() => {
   const query = searchQuery.value.toLowerCase();
   const excludedId = "ca16b1e3-f6bd-4845-9079-7c66ba9d1a26";
 
-  return productStore.products
+  const products = Array.isArray(productStore.products) ? productStore.products : [];
+  return products
     .filter(p =>
       p.product_id !== excludedId &&
       (
@@ -139,7 +156,8 @@ const promosFiltered = computed(() => {
 
   const query = searchQuery.value.toLowerCase();
 
-  return promoStore.promotions
+  const promotions = Array.isArray(promoStore.promotions) ? promoStore.promotions : [];
+  return promotions
     .filter(p =>
       (p.name && p.name.toLowerCase().includes(query)) ||
       (p.description && p.description.toLowerCase().includes(query)) ||

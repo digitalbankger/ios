@@ -62,6 +62,7 @@
 </template>
 
 <script setup>
+import { openExternalUrl } from "@/utils/openExternalUrl";
 import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useCartStore } from "@/store/cartStore";
@@ -267,7 +268,7 @@ const submitOrder = async () => {
           }
         }
       });
-      window.open(response.confirmation.confirmation_url, "_blank");
+      openExternalUrl(response.confirmation.confirmation_url);
       setTimeout(() => {
         promoStore.clearPromotion();
         cartStore.clearCart();

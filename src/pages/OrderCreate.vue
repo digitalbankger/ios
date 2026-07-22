@@ -88,6 +88,7 @@
 </template>
 
 <script setup>
+import { openExternalUrl } from "@/utils/openExternalUrl";
 import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useCartStore } from "@/store/cartStore";
@@ -119,10 +120,9 @@ const promoStore = usePromoStore();
 
 const showMap = ref(false);
 const paymentMethods = [
-  { id: "sbp", description: "Оплата по СБП", image: new URL("@/assets/img/payment/sbp.png", import.meta.url).href },
-  { id: "tbank", description: "Т-банк рассрочка", image: new URL("@/assets/img/payment/tbank.png", import.meta.url).href },
+  { id: "tpay_qr", description: "QR СБП от Т-Банка — самый удобный", image: new URL("@/assets/img/payment/sbp.png", import.meta.url).href },
+  { id: "tpay_card", description: "Банковской картой через Т-Банк", image: new URL("@/assets/img/payment/card.png", import.meta.url).href },
   { id: "dolyame", description: "Оплата Долями", image: new URL("@/assets/img/payment/dolyami.png", import.meta.url).href },
-  { id: "bank_card", description: "Оплата картой онлайн", image: new URL("@/assets/img/payment/card.png", import.meta.url).href },
   { id: "cash", description: "Оплата наличными курьеру", image: new URL("@/assets/img/payment/cash.png", import.meta.url).href },
   { id: "courier_card", description: "Оплата картой курьеру", image: new URL("@/assets/img/payment/card-courier.png", import.meta.url).href },
 ];
@@ -241,8 +241,8 @@ const confirmOrder = (event) => {
 
 const submitOrder = async () => {
   try {
-    const filteredItems = orderData.value.items
-      .filter(item => item.product_id && item.product_id.trim() !== "" && !item.isGift)
+    const filteredItems = cartStore.items
+      .filter(item => item.product_id && String(item.product_id).trim() !== "" && !item.isGift)
       .map(item => ({
         product_id: item.product_id,
         name: item.name || "",
@@ -263,6 +263,16 @@ const submitOrder = async () => {
     const cleanedOrderData = {
       ...orderData.value,
       items: filteredItems,
+      payment_method: orderData.value.paymentMethod,
+      delivery: {
+        type: orderData.value.deliveryMethod,
+        address: orderData.value.address,
+      },
+      other_recipient: {
+        enabled: Boolean(orderData.value.otherRecipient),
+        name: orderData.value.otherRecipientName || undefined,
+        phone: orderData.value.otherRecipientPhone || undefined,
+      },
     };
 
     const response = await createOrder(cleanedOrderData);
@@ -291,18 +301,18 @@ const submitOrder = async () => {
       console.log("[YandexMetrika] dataLayer.push — Покупка:", response.order_id, productsForDataLayer);
 
       promoStore.clearPromotion();
-      cartStore.clearCart();
+      await cartStore.clearCart();
       router.push("/thank");
     } else if (response.confirmation?.confirmation_url) {
-      window.open(response.confirmation.confirmation_url, "_blank");
-      setTimeout(() => {
+      openExternalUrl(response.confirmation.confirmation_url);
+      setTimeout(async () => {
         promoStore.clearPromotion();
-        cartStore.clearCart();
+        await cartStore.clearCart();
         router.push("/thank");
       }, 2000);
     } else {
       promoStore.clearPromotion();
-      cartStore.clearCart();
+      await cartStore.clearCart();
       router.push("/thank");
     }
   } catch (error) {

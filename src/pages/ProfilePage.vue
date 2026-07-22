@@ -198,6 +198,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import axios from "axios";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/store/authStore";
 import { fetchUser, updateUser } from "@/services/userService";

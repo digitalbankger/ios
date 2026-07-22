@@ -1,5 +1,19 @@
-# Vue 3 + Vite
+# DAIGO Mobile
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Мобильное приложение DAIGO на Vue 3 + Vite + Apache Cordova.
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+- Android: Cordova Android 14.0.1
+- iOS: Cordova iOS 8.1.1
+- Облачная iOS-сборка: Ionic Appflow
+- API: `https://api.daigo.ru`
+
+Инструкция по TestFlight: [APPFLOW_IOS_BUILD.md](APPFLOW_IOS_BUILD.md).
+
+## Web-сборка
+
+```bash
+npm install
+npm run build:checked
+```
+
+Каталоги `platforms/` и `plugins/` создаются Cordova/Appflow и не хранятся в Git.

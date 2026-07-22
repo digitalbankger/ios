@@ -5,14 +5,20 @@
       <h1 class="text-base font-medium">Корзина</h1>
     </div>
 
-    <h2 v-if="cartStore.items.length" class="w-full text-slider font-medium">
+    <div v-if="cartStore.isLoading" class="flex justify-center items-center py-10">
+      <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-primary"></div>
+    </div>
+
+    <p v-if="cartStore.error" class="text-red-500 text-sm text-center">{{ cartStore.error }}</p>
+
+    <h2 v-if="!cartStore.isLoading && cartStore.items.length" class="w-full text-slider font-medium">
       Товары в корзине
       <span class="ms-2 font-normal text-sm">
         {{ cartStore.items.length }} товара
       </span>
     </h2>
 
-    <div v-else class="flex flex-col items-center">
+    <div v-else-if="!cartStore.isLoading" class="flex flex-col items-center">
       <h2 class="w-full text-center text-slider font-medium">Ваша корзина пуста</h2>
       <span class="w-2/3 text-center font-normal text-sm mt-2 mb-6">
         Вы пока не добавили <br />ни одного товара в корзину
@@ -126,10 +132,10 @@
       <div class="flex flex-col gap-3 mt-4 mb-3">
         <p class="text-slider font-medium">Промокод на скидку</p>
         <button 
-          v-if="promoStore.appliedPromotion && promoStore.appliedPromotion.promo_type === 'code'"
+          v-if="cartStore.couponInfo?.applied"
           class="border bg-transparent px-3 py-2 h-[50px] w-full text-sm rounded-md transition-all text-cpink border-cpink"
         >
-          "{{ promoStore.appliedPromotion.coupon }}" применен!
+          "{{ cartStore.couponInfo.code || promoStore.appliedPromotion?.coupon }}" применен!
         </button>
         <div v-else class="flex flex-col gap-4"> 
           <input
@@ -173,29 +179,29 @@ const isOutletProduct = (item) => {
 };
 
 const getFullImageUrl = (imgPath) => {
-  if (!imgPath) return '';
-  return imgPath.startsWith("http") ? imgPath : `https://api.daigo.ru${imgPath}`;
+  if (!imgPath) return "./img/placeholder-product.svg";
+  return imgPath.startsWith("http") || imgPath.startsWith(".") ? imgPath : `https://api.daigo.ru${imgPath}`;
 };
 
 const formatPrice = (price) => {
   return new Intl.NumberFormat("ru-RU").format(price);
 };
 
-const increaseQuantity = (item) => {
+const increaseQuantity = async (item) => {
   if (!item.isGift) {
-    cartStore.updateQuantity(item.product_id, item.quantity + 1);
+    await cartStore.updateQuantity(item.product_id, item.quantity + 1);
     if (promoStore.isGiftPromotionActive()) {
       promoStore.applyGift21Logic();
     }
   }
 };
 
-const decreaseQuantity = (item) => {
+const decreaseQuantity = async (item) => {
   if (!item.isGift) {
     if (item.quantity > 1) {
-      cartStore.updateQuantity(item.product_id, item.quantity - 1);
+      await cartStore.updateQuantity(item.product_id, item.quantity - 1);
     } else {
-      cartStore.removeFromCart(item.product_id);
+      await cartStore.removeFromCart(item.product_id);
     }
 
     if (promoStore.isGiftPromotionActive()) {
@@ -204,50 +210,42 @@ const decreaseQuantity = (item) => {
   }
 };
 
-const removeFromCart = (productId) => {
-  cartStore.removeFromCart(productId);
+const removeFromCart = async (productId) => {
+  await cartStore.removeFromCart(productId);
   if (promoStore.isGiftPromotionActive()) {
     promoStore.applyGift21Logic();
   }
 };
 
 const applyPromo = async () => {
-  if (cartStore.actionDiscount > 0) {
-    errorMessagesPromo.value = "Уже применена скидка по акции. Промокод нельзя применить!";
-    setTimeout(() => { errorMessagesPromo.value = ""; }, 3000);
-    return;
-  }
-  if (promoStore.appliedPromotion?.promo_type === "code") {
-    errorMessagesPromo.value = "Промокод уже применен!";
-    setTimeout(() => { errorMessagesPromo.value = ""; }, 3000);
+  errorMessagesPromo.value = "";
+  const code = promoCode.value.trim();
+  if (!code) {
+    errorMessagesPromo.value = "Введите промокод";
     return;
   }
 
-  const promo = promoStore.findPromotionByCoupon(promoCode.value);
-  if (promo) {
-    const response = await promoStore.applyPromotion(promo);
-    if (response.success) {
-      errorMessagesPromo.value = `Промокод "${promo.coupon}" применен! Скидка ${promo.discount}`;
-    } else {
-      errorMessagesPromo.value = "Не удалось применить промокод!";
-    }
-  } else {
-    errorMessagesPromo.value = "Промокод не найден!";
+  try {
+    await cartStore.applyCoupon(code);
+    await promoStore.loadPromotions();
+    errorMessagesPromo.value = `Промокод "${code}" применён`;
+    promoCode.value = "";
+  } catch (error) {
+    errorMessagesPromo.value = error?.message || "Не удалось применить промокод";
   }
-  setTimeout(() => { errorMessagesPromo.value = ""; }, 3000);
-};
+  setTimeout(() => { errorMessagesPromo.value = ""; }, 4000);
+}
 
 const checkout = () => router.push({ path: "/order-create" });
 const goBack = () => router.push({ path: "/" });
 const goCatalog = () => router.push({ path: "/catalog" });
 
-onMounted(() => {
+onMounted(async () => {
   cartStore.applyLoyaltyDiscount();
-  promoStore.loadPromotions();
-
-  if (promoStore.isGiftPromotionActive()) {
-    promoStore.applyGift21Logic();
-  }
+  await Promise.allSettled([
+    cartStore.loadCart({ force: true }),
+    promoStore.loadPromotions(),
+  ]);
 });
 </script>
 

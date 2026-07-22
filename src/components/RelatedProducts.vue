@@ -22,7 +22,7 @@ import ProductCard from "@/components/ProductCard.vue";
 
 const props = defineProps({
   currentProductId: {
-    type: Number,
+    type: [String, Number],
     required: true,
   },
 });
@@ -30,8 +30,9 @@ const props = defineProps({
 const productStore = useProductStore();
 
 const relatedProducts = computed(() => {
-  return productStore.products
-    .filter((p) => p.id !== props.currentProductId)
+  const products = Array.isArray(productStore.products) ? productStore.products : [];
+  return products
+    .filter((p) => String(p.product_id || p.id) !== String(props.currentProductId))
     .filter((p) => p.product_id !== "ca16b1e3-f6bd-4845-9079-7c66ba9d1a26")
     .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
     .slice(0, 6);

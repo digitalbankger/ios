@@ -1,111 +1,93 @@
 import { defineStore } from "pinia";
-import { fetchUser, updateUser } from "@/services/userService";
-import { useCartStore } from '@/store/cartStore';
+import { fetchUser, updateUser, addUserAddress } from "@/services/userService";
+import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/authStore";
 
 export const useUserStore = defineStore("userStore", {
   state: () => ({
     profile: null,
+    isLoading: false,
+    error: "",
   }),
 
   actions: {
     async loadProfile() {
       const authStore = useAuthStore();
-      if (!authStore.user?.id) {
-        console.warn("[loadProfile] Нет `user.id`, профиль не загружен.");
-        return;
+      const userId = authStore.userId || authStore.user?.id || localStorage.getItem("daigo_id");
+
+      if (!userId || !authStore.token) {
+        this.profile = null;
+        return null;
       }
 
+      this.isLoading = true;
+      this.error = "";
       try {
-        const data = await fetchUser(authStore.user.id);
-
-        if (data) {
-          this.profile = {
-            id: authStore.user.id,
-            ...data,
-            addresses: data.addresses || [],
-            cards: data.cards || [],
-            bonuses: {
-              valid: { value: data.bonuses?.valid?.value || 0 },
-              expiring: {
-                value: data.bonuses?.expiring?.value || 0,
-                date_end: data.bonuses?.expiring?.date_end || null,
-              },
-              expired: { value: data.bonuses?.expired?.value || 0 },
+        const data = await fetchUser(userId);
+        this.profile = {
+          id: userId,
+          ...data,
+          addresses: data?.addresses || [],
+          cards: data?.cards || [],
+          bonuses: {
+            valid: { value: data?.bonuses?.valid?.value || 0 },
+            expiring: {
+              value: data?.bonuses?.expiring?.value || 0,
+              date_end: data?.bonuses?.expiring?.date_end || null,
             },
-          };
-
-          useCartStore().applyLoyaltyDiscount();
-        }
+            expired: { value: data?.bonuses?.expired?.value || 0 },
+          },
+        };
+        useCartStore().applyLoyaltyDiscount();
+        return this.profile;
       } catch (error) {
+        this.error = error?.response?.data?.message || error?.message || "Ошибка загрузки профиля";
         console.error("[loadProfile] Ошибка загрузки профиля:", error);
+        if ([401, 403].includes(error?.response?.status)) authStore.logout();
+        return null;
+      } finally {
+        this.isLoading = false;
       }
     },
 
     async saveProfile(updatedData) {
-      if (!this.profile?.id) {
-        console.warn("[saveProfile] Нет ID пользователя, обновление невозможно.");
-        return;
-      }
+      const authStore = useAuthStore();
+      const userId = this.profile?.id || authStore.userId;
+      if (!userId) return null;
 
-      try {
-        const data = await updateUser(this.profile.id, updatedData);
-        if (data) {
-          this.profile = {
-            ...this.profile,
-            ...data,
-            addresses: data.addresses || [],
-            cards: data.cards || [],
-            bonuses: {
-              valid: { value: data.bonuses?.valid?.value ?? this.profile.bonuses.valid.value },
-              expiring: {
-                value: data.bonuses?.expiring?.value ?? this.profile.bonuses.expiring.value,
-                date_end: data.bonuses?.expiring?.date_end ?? this.profile.bonuses.expiring.date_end,
-              },
-              expired: { value: data.bonuses?.expired?.value ?? this.profile.bonuses.expired.value },
-            },
-          };
-
-          useCartStore().applyLoyaltyDiscount();
-        }
-      } catch (error) {
-        console.error("[saveProfile] Ошибка обновления профиля:", error);
-      }
+      const data = await updateUser(userId, updatedData);
+      this.profile = {
+        ...(this.profile || {}),
+        ...data,
+        id: userId,
+        addresses: data?.addresses || this.profile?.addresses || [],
+        cards: data?.cards || this.profile?.cards || [],
+        bonuses: data?.bonuses || this.profile?.bonuses || {
+          valid: { value: 0 },
+          expiring: { value: 0, date_end: null },
+          expired: { value: 0 },
+        },
+      };
+      useCartStore().applyLoyaltyDiscount();
+      return this.profile;
     },
 
     async addAddress(newAddress) {
-      if (!this.profile?.id) return;
-
-      try {
-        const updatedAddresses = [...this.profile.addresses, newAddress];
-        const response = await updateUser(this.profile.id, { addresses: updatedAddresses });
-
-        if (response) {
-          this.profile.addresses = updatedAddresses;
-        }
-      } catch (error) {
-        console.error("[addAddress] Ошибка добавления адреса:", error);
-      }
+      const authStore = useAuthStore();
+      const userId = this.profile?.id || authStore.userId;
+      if (!userId) return null;
+      await addUserAddress(userId, newAddress);
+      return this.loadProfile();
     },
 
     async removeAddress(index) {
-      if (!this.profile?.id) return;
-
-      try {
-        const updatedAddresses = this.profile.addresses.filter((_, i) => i !== index);
-        const response = await updateUser(this.profile.id, { addresses: updatedAddresses });
-
-        if (response) {
-          this.profile.addresses = updatedAddresses;
-        }
-      } catch (error) {
-        console.error("[removeAddress] Ошибка удаления адреса:", error);
-      }
+      const addresses = (this.profile?.addresses || []).filter((_, itemIndex) => itemIndex !== index);
+      return this.saveProfile({ addresses });
     },
-  },
 
-  persist: {
-    key: "userStore",
-    storage: localStorage,
+    clear() {
+      this.profile = null;
+      this.error = "";
+    },
   },
 });
