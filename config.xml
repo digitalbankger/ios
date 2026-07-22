@@ -48,9 +48,9 @@
 
     <hook
         type="after_platform_add"
-        src="scripts/force-ios-only.cjs"
+        src="scripts/force-ios-only.js"
     />
-    
+
     <platform name="android">
         <icon src="res/icon.png" />
         <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
